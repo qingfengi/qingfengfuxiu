@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全球媒体监控 · Global Media Monitor</title>
+<style>
+  /* ===== Reset & Base ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --danger: #f85149;
+    --twitter: #1d9bf0;
+    --radius: 8px;
+    --gap: 16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ===== Header ===== */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .logo .globe { font-size: 22px; }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+  }
+  .btn:hover { background: var(--border); }
+  .btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  .btn.primary:hover { opacity: 0.85; }
+
+  /* ===== Layout ===== */
+  .container {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ===== Sidebar ===== */
+  aside {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+  }
+
+  .sidebar-section { margin-bottom: 20px; }
+
+  .sidebar-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    padding: 0 4px;
+  }
+
+  .filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+    transition: background 0.15s, color 0.15s;
+    position: relative;
+  }
+  .filter-btn:hover { background: var(--surface2); color: var(--text); }
+  .filter-btn.active { background: rgba(88,166,255,0.15); color: var(--accent); }
+
+  .filter-btn .count {
+    margin-left: auto;
+    font-size: 11px;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 1px 7px;
+    color: var(--text-muted);
+  }
+  .filter-btn.active .count { background: rgba(88,166,255,0.2); color: var(--accent); }
+
+  .source-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ===== Stats Bar ===== */
+  .stats-bar {
+    display: flex;
+    gap: 16px;
+    padding: 12px 20px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .stat-item .val {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ===== Main Content ===== */
+  main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .toolbar {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    flex: 1;
+    min-width: 200px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 12px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--text-muted); }
+
+  select.filter-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* ===== Article Feed ===== */
+  .feed {
+    overflow-y: auto;
+    padding: 0 20px 20px;
+    flex: 1;
+  }
+
+  .date-group { margin-top: 16px; }
+
+  .date-divider {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 10px 0 6px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  .article-card {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    margin-bottom: 4px;
+  }
+  .article-card:hover {
+    background: var(--surface2);
+    border-color: var(--border);
+  }
+
+  .article-left { flex-shrink: 0; padding-top: 2px; }
+
+  .source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-bottom: 6px;
+  }
+
+  .type-pill {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 4px;
+    opacity: 0.8;
+  }
+  .type-rss { background: rgba(63,185,80,0.2); color: var(--accent2); }
+  .type-twitter { background: rgba(29,155,240,0.2); color: var(--twitter); }
+
+  .article-title {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin-bottom: 4px;
+  }
+  .article-title a { color: var(--text); }
+  .article-title a:hover { color: var(--accent); text-decoration: none; }
+
+  .article-summary {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .article-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .category-tag {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+  }
+
+  /* ===== Load More ===== */
+  .load-more-area {
+    text-align: center;
+    padding: 16px;
+  }
+
+  /* ===== Empty / Loading ===== */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    gap: 12px;
+  }
+  .empty-state .big-icon { font-size: 48px; }
+
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== Notifications ===== */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-size: 13px;
+    display: none;
+    z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  /* ===== Twitter notice ===== */
+  .twitter-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: rgba(29,155,240,0.08);
+    border: 1px solid rgba(29,155,240,0.2);
+    border-radius: 6px;
+    font-size: 12px;
+    color: #1d9bf0;
+    margin-top: 8px;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .container { grid-template-columns: 1fr; }
+    aside { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="globe">🌐</span>
+    <div>
+      <div>全球媒体监控</div>
+      <div style="font-size:11px;font-weight:400;color:var(--text-muted)">Global Media Monitor</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-dot" id="statusDot" title="实时更新中"></div>
+    <span style="font-size:12px;color:var(--text-muted)" id="lastUpdate">加载中...</span>
+    <button class="btn" onclick="triggerRefresh()">🔄 立即刷新</button>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Sidebar -->
+  <aside>
+    <div class="sidebar-section">
+      <div class="sidebar-label">分类筛选</div>
+      <button class="filter-btn active" data-filter="category" data-value="">
+        <span>📋</span> 全部分类
+        <span class="count" id="cnt-all">0</span>
+      </button>
+      <button class="filter-btn" data-filter="category" data-value="官方媒体">
+        <span>📺</span> 官方媒体
+        <span class="count" id="cnt-official">0</span>
+      </button>
+      <button class="filter-btn" data-filter="category" data-value="权威媒体">
+        <span>📰</span> 权威媒体
+        <span class="count" id="cnt-authority">0</span>
+      </button>
+      <button class="filter-btn" data-filter="category" data-value="国家领导人">
+        <span>👤</span> 国家领导人
+        <span class="count" id="cnt-leader">0</span>
+      </button>
+      <button class="filter-btn" data-filter="category" data-value="政府机构">
+        <span>🏛️</span> 政府机构
+        <span class="count" id="cnt-gov">0</span>
+      </button>
+      <button class="filter-btn" data-filter="category" data-value="国际组织">
+        <span>🌍</span> 国际组织
+        <span class="count" id="cnt-intl">0</span>
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">国家/地区</div>
+      <button class="filter-btn" data-filter="country" data-value="">
+        <span>🌐</span> 全球
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="中国">
+        <span>🇨🇳</span> 中国
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="美国">
+        <span>🇺🇸</span> 美国
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="英国">
+        <span>🇬🇧</span> 英国
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="法国">
+        <span>🇫🇷</span> 法国
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="德国">
+        <span>🇩🇪</span> 德国
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="俄罗斯">
+        <span>🇷🇺</span> 俄罗斯
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="日本">
+        <span>🇯🇵</span> 日本
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="卡塔尔">
+        <span>🇶🇦</span> 卡塔尔
+      </button>
+      <button class="filter-btn" data-filter="country" data-value="国际">
+        <span>🌍</span> 国际
+      </button>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">数据来源</div>
+      <div id="sourcesPanel">
+        <div style="color:var(--text-muted);font-size:12px;padding:4px">加载中...</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-item">
+        <span>📦</span>
+        <span>共 <span class="val" id="statTotal">0</span> 条</span>
+      </div>
+      <div class="stat-item" id="twitterStatus" style="display:none">
+        <span>🐦</span>
+        <span class="val" style="color:var(--twitter)">Twitter 已启用</span>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <input
+        class="search-box"
+        type="text"
+        id="searchInput"
+        placeholder="🔍  搜索标题、关键词..."
+        oninput="debounceSearch()"
+      >
+      <select class="filter-select" id="sortSelect" onchange="loadArticles(true)">
+        <option value="">最新优先</option>
+      </select>
+    </div>
+
+    <div class="feed" id="feed">
+      <div class="empty-state">
+        <div class="spinner"></div>
+        <div>正在抓取数据，请稍候...</div>
+        <div style="font-size:12px">首次启动需要约30秒</div>
+      </div>
+    </div>
+
+    <div class="load-more-area" id="loadMoreArea" style="display:none">
+      <button class="btn" onclick="loadMore()">加载更多</button>
+    </div>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ===== State =====
+const state = {
+  category: '',
+  country: '',
+  source_id: '',
+  keyword: '',
+  offset: 0,
+  limit: 50,
+  loading: false,
+  hasMore: false,
+};
+
+// ===== Utilities =====
+function toast(msg, dur = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.style.display = 'none', dur);
+}
+
+function formatTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return `${Math.floor(diff/60)}分钟前`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}小时前`;
+  return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
+  if (d.toDateString() === today.toDateString()) return '今天';
+  if (d.toDateString() === yesterday.toDateString()) return '昨天';
+  return d.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' });
+}
+
+// ===== Articles =====
+async function loadArticles(reset = false) {
+  if (state.loading) return;
+  if (reset) { state.offset = 0; document.getElementById('feed').innerHTML = ''; }
+
+  state.loading = true;
+  const params = new URLSearchParams({
+    limit: state.limit,
+    offset: state.offset,
+    ...(state.category && { category: state.category }),
+    ...(state.country && { country: state.country }),
+    ...(state.source_id && { source_id: state.source_id }),
+    ...(state.keyword && { keyword: state.keyword }),
+  });
+
+  try {
+    const res = await fetch('/api/articles?' + params);
+    const articles = await res.json();
+
+    if (reset && articles.length === 0) {
+      document.getElementById('feed').innerHTML = `
+        <div class="empty-state">
+          <div class="big-icon">📭</div>
+          <div>暂无数据</div>
+          <div style="font-size:12px;color:var(--text-muted)">请点击右上角"立即刷新"重新抓取</div>
+        </div>`;
+      document.getElementById('loadMoreArea').style.display = 'none';
+      return;
+    }
+
+    renderArticles(articles, reset);
+    state.offset += articles.length;
+    state.hasMore = articles.length === state.limit;
+    document.getElementById('loadMoreArea').style.display = state.hasMore ? '' : 'none';
+  } catch(e) {
+    if (reset) {
+      document.getElementById('feed').innerHTML = `<div class="empty-state">
+        <div class="big-icon">⚠️</div><div>加载失败，请刷新页面</div>
+      </div>`;
+    }
+  } finally {
+    state.loading = false;
+  }
+}
+
+function renderArticles(articles, reset) {
+  const feed = document.getElementById('feed');
+  if (reset) feed.innerHTML = '';
+
+  // Group by date
+  const groups = {};
+  for (const a of articles) {
+    const key = formatDate(a.published);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(a);
+  }
+
+  for (const [date, items] of Object.entries(groups)) {
+    let existing = feed.querySelector(`[data-date="${date}"] .date-articles`);
+    if (!existing) {
+      const g = document.createElement('div');
+      g.className = 'date-group';
+      g.dataset.date = date;
+      g.innerHTML = `<div class="date-divider">${date}</div><div class="date-articles"></div>`;
+      feed.appendChild(g);
+      existing = g.querySelector('.date-articles');
+    }
+    for (const a of items) {
+      existing.insertAdjacentHTML('beforeend', articleHTML(a));
+    }
+  }
+}
+
+function articleHTML(a) {
+  const typePill = a.source_type === 'twitter'
+    ? '<span class="type-pill type-twitter">Twitter</span>'
+    : '<span class="type-pill type-rss">RSS</span>';
+
+  const summary = a.summary
+    ? `<div class="article-summary">${escapeHtml(a.summary)}</div>`
+    : '';
+
+  return `
+    <div class="article-card">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap">
+          <span class="source-badge" style="background:${a.color}22;color:${a.color}">
+            ${a.flag} ${escapeHtml(a.source_name)}
+          </span>
+          ${typePill}
+          <span class="category-tag">${escapeHtml(a.category)}</span>
+          <span style="font-size:11px;color:var(--text-muted)">${a.country}</span>
+        </div>
+        <div class="article-title">
+          <a href="${escapeHtml(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.title)}</a>
+        </div>
+        ${summary}
+        <div class="article-meta">
+          <span title="${a.published}">${formatTime(a.published)}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function loadMore() { loadArticles(false); }
+
+// ===== Search =====
+let searchTimer;
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.keyword = document.getElementById('searchInput').value.trim();
+    loadArticles(true);
+  }, 400);
+}
+
+// ===== Filters =====
+document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const filter = btn.dataset.filter;
+    const value = btn.dataset.value;
+
+    // Deactivate siblings
+    document.querySelectorAll(`.filter-btn[data-filter="${filter}"]`)
+      .forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (filter === 'category') {
+      state.category = value;
+      state.country = '';
+      state.source_id = '';
+      document.querySelectorAll('.filter-btn[data-filter="country"]')
+        .forEach(b => b.classList.remove('active'));
+    } else if (filter === 'country') {
+      state.country = value;
+      state.category = '';
+      state.source_id = '';
+      document.querySelectorAll('.filter-btn[data-filter="category"]')
+        .forEach(b => b.classList.remove('active'));
+    }
+    loadArticles(true);
+  });
+});
+
+// ===== Stats =====
+async function loadStats() {
+  const res = await fetch('/api/stats');
+  const stats = await res.json();
+  document.getElementById('statTotal').textContent = stats.total.toLocaleString();
+
+  const catMap = {};
+  for (const c of stats.by_category) catMap[c.category] = c.cnt;
+  document.getElementById('cnt-all').textContent = stats.total;
+  document.getElementById('cnt-official').textContent = catMap['官方媒体'] || 0;
+  document.getElementById('cnt-authority').textContent = catMap['权威媒体'] || 0;
+  document.getElementById('cnt-leader').textContent = catMap['国家领导人'] || 0;
+  document.getElementById('cnt-gov').textContent = catMap['政府机构'] || 0;
+  document.getElementById('cnt-intl').textContent = catMap['国际组织'] || 0;
+}
+
+// ===== Sources panel =====
+async function loadSources() {
+  const res = await fetch('/api/sources');
+  const data = await res.json();
+  const panel = document.getElementById('sourcesPanel');
+
+  if (data.twitter_enabled) {
+    document.getElementById('twitterStatus').style.display = '';
+  } else {
+    panel.insertAdjacentHTML('beforeend', `
+      <div class="twitter-notice">
+        🐦 配置 Twitter Bearer Token 以启用 Twitter 功能
+      </div>`);
+  }
+
+  let html = '';
+  for (const s of data.rss) {
+    html += `<button class="filter-btn" data-filter="source_id" data-source-id="${s.id}"
+       onclick="filterBySource('${s.id}', this)">
+      <span class="source-dot" style="background:${s.color}"></span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.flag} ${s.name}</span>
+    </button>`;
+  }
+  panel.innerHTML += html;
+}
+
+function filterBySource(id, btn) {
+  state.source_id = state.source_id === id ? '' : id;
+  state.category = '';
+  state.country = '';
+
+  document.querySelectorAll('[data-source-id]').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.filter-btn[data-filter]').forEach(b => b.classList.remove('active'));
+  if (state.source_id) btn.classList.add('active');
+  else document.querySelector('.filter-btn[data-value=""]').classList.add('active');
+
+  loadArticles(true);
+}
+
+// ===== Refresh =====
+async function triggerRefresh() {
+  toast('⏳ 正在抓取最新数据...');
+  await fetch('/api/refresh', { method: 'POST' });
+  setTimeout(async () => {
+    await Promise.all([loadStats(), loadArticles(true)]);
+    document.getElementById('lastUpdate').textContent = '刚刚更新';
+    toast('✅ 数据已更新');
+  }, 8000);
+}
+
+// ===== Auto refresh =====
+function updateTimestamp() {
+  const el = document.getElementById('lastUpdate');
+  if (!el.dataset.ts) el.dataset.ts = Date.now();
+  const diff = Math.floor((Date.now() - el.dataset.ts) / 1000);
+  if (diff < 60) { el.textContent = '刚刚更新'; return; }
+  el.textContent = `${Math.floor(diff/60)}分钟前更新`;
+}
+
+// ===== Init =====
+(async () => {
+  await loadSources();
+  await loadStats();
+  await loadArticles(true);
+  document.getElementById('lastUpdate').dataset.ts = Date.now();
+  document.getElementById('lastUpdate').textContent = '刚刚更新';
+
+  // Periodic UI refresh
+  setInterval(() => {
+    updateTimestamp();
+  }, 30000);
+
+  // Periodic data refresh (every 5 min)
+  setInterval(async () => {
+    await Promise.all([loadStats(), loadArticles(true)]);
+  }, 300000);
+})();
+</script>
+</body>
+</html>
